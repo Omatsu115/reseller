@@ -1159,54 +1159,40 @@ function resetForm() {
 let cr=null, scanLock=false;
 
 async function openScanner() {
-  const modal = document.getElementById('scan-modal');
-  const status = document.getElementById('sstat');
-  modal.classList.add('on');
-  status.className = 'sst sst-w';
-  status.textContent = '📷 カメラ起動中...';
+  goPage('add');
+  document.getElementById('scan-modal').classList.add('on');
+  document.getElementById('jan-in').value='';
+  setStat('📷 カメラ起動中…','sst-w');
+  scanLock=false;
+  setTimeout(startScan,80);
+}
 
+async function startScan() {
   try {
-    const codeReader = new ZXing.BrowserMultiFormatReader();
-    // iPhoneの背面カメラを確実に指定するための設定
-    const constraints = {
-      video: { facingMode: { exact: "environment" } }
-    };
-
-    // もし背面カメラ指定でエラーが出た場合のフォールバック（予備）
-    const videoInputDevices = await codeReader.listVideoInputDevices();
-    if (videoInputDevices.length === 0) throw new Error('カメラが見つかりません');
-
-    // スキャン開始
-    codeReader.decodeFromVideoDevice(null, 'svid', (result, err) => {
-      if (result) {
-        document.getElementById('jan-in').value = result.text;
-        status.className = 'sst sst-ok';
-        status.textContent = '✅ 読み取り成功！';
-        
-        // 成功音の代わりにバイブ（iPhoneは設定次第）
-        if (navigator.vibrate) navigator.vibrate(200);
-        
-        // 少し待ってから検索処理へ
-        setTimeout(() => {
-          onJanInput(result.text);
-          closeScanner();
-        }, 600);
+    if(typeof ZXing==='undefined') throw new Error('スキャナーが読み込まれていません');
+    const hints=new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[
+      ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+      ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.UPC_E,ZXing.BarcodeFormat.CODE_128,
+    ]);
+    cr=new ZXing.BrowserMultiFormatReader(hints);
+    const devs=await ZXing.BrowserCodeReader.listVideoInputDevices();
+    const dev=devs.find(d=>/back|rear|後|環境/i.test(d.label))||devs[devs.length-1];
+    setStat('📷 スキャン待機中…','sst-w');
+    await cr.decodeFromVideoDevice(dev?.deviceId,'svid',(res)=>{
+      if(res&&!scanLock){
+        scanLock=true;
+        setStat(`✅ ${res.text}`,'sst-ok');
+        if(navigator.vibrate)navigator.vibrate([60,30,60]);
+        setTimeout(()=>{closeScanner();processJAN(res.text);},700);
       }
-    }).catch(e => {
-      console.error(e);
-      status.className = 'sst sst-e';
-      status.textContent = '❌ スキャナー起動失敗';
     });
-
-  } catch (e) {
-    console.error(e);
-    status.className = 'sst sst-e';
-    status.textContent = '❌ カメラにアクセスできません';
-    // 背面カメラ(exact)で失敗した場合は、普通の起動を試みる
-    alert("背面カメラの起動に失敗しました。ブラウザの設定でカメラを許可しているか確認してください。");
+  } catch(e) {
+    setStat(`❌ ${e.message||'カメラエラー'}`,'sst-e');
+    toast('カメラが使えません。手入力してください。','err');
   }
- }
-
+}
+        
 function setStat(txt,cls){
   const e=document.getElementById('sstat');
   e.textContent=txt; e.className='sst '+cls;
