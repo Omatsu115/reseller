@@ -247,7 +247,7 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <div>
       <div class="fl">送料</div>
       <div class="ship-ui">
-        <div class="ship-q">🚚 送料はかかりましたか？</div>
+        <div class="ship-q">🚚　送料はかかりましたか？</div>
         <div class="ship-btns">
           <button class="ship-btn on" id="sbn" onclick="setShip('none')">なし<span class="ship-sub">店頭 / 送料込み</span></button>
           <button class="ship-btn" id="sby" onclick="setShip('yes')">あり → 入力<span class="ship-sub">実費を入力</span></button>
